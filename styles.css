@@ -1,0 +1,430 @@
+* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+html, body {
+    height: 100%;
+    overflow: hidden;
+    background: linear-gradient(
+        180deg,
+        #f8f6f4 0%,
+        #f0ebe6 20%,
+        #e8e4df 40%,
+        #dfd9d2 70%,
+        #d5cec5 100%
+    );
+}
+
+.container {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    cursor: pointer;
+    background: linear-gradient(
+        180deg,
+        rgba(255, 255, 255, 0.4) 0%,
+        rgba(255, 255, 255, 0.1) 30%,
+        transparent 50%,
+        rgba(200, 190, 180, 0.1) 80%,
+        rgba(180, 170, 160, 0.2) 100%
+    );
+}
+
+.back-image {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    user-select: none;
+    -webkit-user-drag: none;
+    filter: brightness(1.02) contrast(0.98);
+    mix-blend-mode: multiply;
+    -webkit-mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 15%,
+        black 85%,
+        transparent 100%
+    );
+    mask-image: linear-gradient(
+        to right,
+        transparent 0%,
+        black 15%,
+        black 85%,
+        transparent 100%
+    );
+}
+
+/* The ripple of peace */
+.ripple {
+    position: absolute;
+    border-radius: 50%;
+    pointer-events: none;
+    transform: translate(-50%, -50%) scale(0);
+    animation: bloom 2.5s ease-out forwards;
+}
+
+.ripple::before {
+    content: '';
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    transform: translate(-50%, -50%);
+    background: radial-gradient(
+        circle,
+        var(--ripple-color-strong) 0%,
+        var(--ripple-color-medium) 30%,
+        var(--ripple-color-soft) 60%,
+        transparent 100%
+    );
+}
+
+@keyframes bloom {
+    0% {
+        transform: translate(-50%, -50%) scale(0);
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.8;
+    }
+    100% {
+        transform: translate(-50%, -50%) scale(1);
+        opacity: 0;
+    }
+}
+
+/* Floating label bubble */
+.label-bubble {
+    position: absolute;
+    padding: 10px 18px;
+    background: rgba(255, 255, 255, 0.95);
+    backdrop-filter: blur(10px);
+    border-radius: 20px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    pointer-events: none;
+    transform: translate(-50%, -100%) translateY(-15px);
+    animation: bubbleAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+    white-space: nowrap;
+    z-index: 50;
+}
+
+.bubble-text {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 500;
+    color: #555;
+    letter-spacing: 0.01em;
+}
+
+@keyframes bubbleAppear {
+    0% {
+        opacity: 0;
+        transform: translate(-50%, -100%) translateY(0) scale(0.5);
+    }
+    100% {
+        opacity: 1;
+        transform: translate(-50%, -100%) translateY(-15px) scale(1);
+    }
+}
+
+.label-bubble.popping {
+    animation: bubblePop 0.3s ease-in forwards;
+}
+
+@keyframes bubblePop {
+    0% {
+        opacity: 1;
+        transform: translate(-50%, -100%) translateY(-15px) scale(1);
+    }
+    50% {
+        opacity: 0.8;
+        transform: translate(-50%, -100%) translateY(-15px) scale(1.1);
+    }
+    100% {
+        opacity: 0;
+        transform: translate(-50%, -100%) translateY(-15px) scale(0);
+    }
+}
+
+/* Voice Orb */
+.voice-orb-container {
+    position: fixed;
+    bottom: 40px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    z-index: 90;
+}
+
+.voice-orb {
+    width: 72px;
+    height: 72px;
+    border-radius: 50%;
+    cursor: pointer;
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.orb-glow {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(147, 112, 219, 0.4) 0%, rgba(138, 143, 226, 0.2) 50%, transparent 70%);
+    animation: orbBreath 4s ease-in-out infinite;
+}
+
+.orb-core {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, rgba(147, 112, 219, 0.6) 0%, rgba(100, 149, 237, 0.6) 100%);
+    backdrop-filter: blur(10px);
+    box-shadow: 0 4px 20px rgba(147, 112, 219, 0.3);
+    transition: transform 0.3s, box-shadow 0.3s;
+}
+
+.voice-orb:hover .orb-core {
+    transform: scale(1.1);
+    box-shadow: 0 6px 30px rgba(147, 112, 219, 0.4);
+}
+
+@keyframes orbBreath {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.6;
+    }
+    50% {
+        transform: scale(1.15);
+        opacity: 0.9;
+    }
+}
+
+.voice-orb.listening .orb-glow {
+    animation: orbPulse 1s ease-in-out infinite;
+}
+
+.voice-orb.listening .orb-core {
+    background: linear-gradient(135deg, rgba(123, 104, 238, 0.8) 0%, rgba(138, 143, 226, 0.8) 100%);
+    box-shadow: 0 6px 30px rgba(123, 104, 238, 0.5);
+}
+
+@keyframes orbPulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 0.7;
+    }
+    50% {
+        transform: scale(1.3);
+        opacity: 1;
+    }
+}
+
+.orb-hint {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 13px;
+    color: rgba(100, 100, 120, 0.6);
+    transition: opacity 0.3s;
+}
+
+.voice-orb.listening + .orb-hint {
+    opacity: 0;
+}
+
+/* Care Plan Overlay */
+.care-plan-overlay {
+    position: fixed;
+    bottom: 140px;
+    left: 0;
+    right: 0;
+    z-index: 85;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.5s ease;
+}
+
+.care-plan-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.plan-heading {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 26px;
+    font-weight: 300;
+    color: rgba(60, 60, 60, 0.9);
+    text-align: center;
+    margin: 0 0 20px;
+    letter-spacing: -0.3px;
+}
+
+.cards-track {
+    display: flex;
+    gap: 12px;
+    padding: 0 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    -webkit-overflow-scrolling: touch;
+}
+
+.cards-track::-webkit-scrollbar {
+    display: none;
+}
+
+.care-card {
+    flex: 0 0 160px;
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
+    border-radius: 20px;
+    padding: 12px;
+    box-shadow: 0 4px 24px rgba(0, 0, 0, 0.08);
+    opacity: 0;
+    transform: translateY(30px);
+    animation: cardPopIn 0.5s ease forwards;
+}
+
+.care-card:nth-child(1) { animation-delay: 0.1s; }
+.care-card:nth-child(2) { animation-delay: 0.2s; }
+.care-card:nth-child(3) { animation-delay: 0.3s; }
+.care-card:nth-child(4) { animation-delay: 0.4s; }
+
+@keyframes cardPopIn {
+    to {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+.care-card-image {
+    width: 100%;
+    height: 100px;
+    border-radius: 12px;
+    object-fit: cover;
+    background: linear-gradient(135deg, rgba(147, 112, 219, 0.15) 0%, rgba(100, 149, 237, 0.15) 100%);
+    margin-bottom: 10px;
+}
+
+.care-card-category {
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    color: #888;
+    margin-bottom: 4px;
+}
+
+.care-card-category::before {
+    content: '✦';
+    font-size: 10px;
+    color: #7b68ee;
+}
+
+.care-card-name {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    font-weight: 600;
+    color: #333;
+    margin: 0;
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.care-card-meta {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 11px;
+    color: #999;
+    margin-top: 6px;
+}
+
+.dismiss-plan {
+    position: absolute;
+    top: -40px;
+    right: 20px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    color: #888;
+    box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+}
+
+.loading-orb {
+    text-align: center;
+    padding: 40px;
+    color: #888;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+}
+
+.error {
+    color: #e53e3e;
+    padding: 16px;
+    background: #fff5f5;
+    border-radius: 12px;
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    margin: 0 20px;
+}
+
+.api-key-prompt {
+    text-align: center;
+    padding: 20px;
+    background: rgba(255, 255, 255, 0.9);
+    border-radius: 16px;
+    margin: 0 20px;
+}
+
+.api-key-prompt p {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 14px;
+    color: #666;
+    margin-bottom: 12px;
+}
+
+.api-key-prompt input {
+    width: 100%;
+    padding: 12px 16px;
+    border: 1px solid #ddd;
+    border-radius: 12px;
+    font-size: 14px;
+    margin-bottom: 12px;
+}
+
+.api-key-prompt button {
+    padding: 12px 24px;
+    border: none;
+    border-radius: 50px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    font-size: 14px;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.api-key-help {
+    font-size: 12px;
+    color: #888;
+    margin-top: 12px;
+}
+
+.api-key-help a {
+    color: #667eea;
+}

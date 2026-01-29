@@ -1,0 +1,30 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Peace Field</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="container" id="container">
+        <img src="assets/FLORA Image.webp" alt="" class="back-image" id="backImage">
+    </div>
+
+    <div class="voice-orb-container" id="voiceOrbContainer">
+        <div class="voice-orb" id="voiceOrb">
+            <div class="orb-glow"></div>
+            <div class="orb-core"></div>
+        </div>
+        <div class="orb-hint" id="orbHint">Tap to speak</div>
+    </div>
+
+    <div class="care-plan-overlay" id="carePlanOverlay">
+        <h2 class="plan-heading">Here's your care plan:</h2>
+        <div class="cards-track" id="cardsTrack"></div>
+        <button class="dismiss-plan" id="dismissPlan">×</button>
+    </div>
+
+    <script src="app.js"></script>
+</body>
+</html>
