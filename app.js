@@ -1,7 +1,7 @@
 const container = document.getElementById('container');
 const backImage = document.getElementById('backImage');
-const voiceOrb = document.getElementById('voiceOrb');
-const orbHint = document.getElementById('orbHint');
+const voiceBar = document.getElementById('voiceBar');
+const voiceBarText = document.getElementById('voiceBarText');
 const carePlanOverlay = document.getElementById('carePlanOverlay');
 const cardsTrack = document.getElementById('cardsTrack');
 const dismissPlan = document.getElementById('dismissPlan');
@@ -106,18 +106,20 @@ function createLabelBubble(x, y, location) {
     }, 2000);
 }
 
-// Voice orb functionality
-voiceOrb.addEventListener('click', () => {
+// Voice bar functionality
+voiceBar.addEventListener('click', () => {
     if (isListening) {
-        stopOrbListening();
+        stopListening();
     } else {
-        startOrbListening();
+        startListening();
     }
 });
 
-function startOrbListening() {
+const defaultText = 'How have you tried to heal your back so far?';
+
+function startListening() {
     if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        orbHint.textContent = 'Speech not supported. Try Chrome.';
+        voiceBarText.textContent = 'Speech not supported. Try Chrome.';
         return;
     }
 
@@ -130,8 +132,8 @@ function startOrbListening() {
 
     orbRecognition.onstart = () => {
         isListening = true;
-        voiceOrb.classList.add('listening');
-        orbHint.textContent = 'Listening...';
+        voiceBar.classList.add('listening');
+        voiceBarText.textContent = 'Listening...';
     };
 
     orbRecognition.onresult = (event) => {
@@ -143,38 +145,38 @@ function startOrbListening() {
                 interim += event.results[i][0].transcript;
             }
         }
-        orbHint.textContent = orbTranscript + interim || 'Listening...';
+        voiceBarText.textContent = orbTranscript + interim || 'Listening...';
     };
 
     orbRecognition.onerror = (event) => {
-        orbHint.textContent = 'Error: ' + event.error;
-        stopOrbListening();
+        voiceBarText.textContent = 'Error: ' + event.error;
+        stopListening();
     };
 
     orbRecognition.onend = () => {
         isListening = false;
-        voiceOrb.classList.remove('listening');
+        voiceBar.classList.remove('listening');
 
         if (orbTranscript.trim()) {
-            orbHint.textContent = 'Creating your plan...';
-            generateCarePlanFromOrb(orbTranscript.trim());
+            voiceBarText.textContent = 'Creating your plan...';
+            generateCarePlan(orbTranscript.trim());
         } else {
-            orbHint.textContent = 'Tap to speak';
+            voiceBarText.textContent = defaultText;
         }
     };
 
     orbRecognition.start();
 }
 
-function stopOrbListening() {
+function stopListening() {
     if (orbRecognition) {
         orbRecognition.stop();
         isListening = false;
-        voiceOrb.classList.remove('listening');
+        voiceBar.classList.remove('listening');
     }
 }
 
-async function generateCarePlanFromOrb(userInput) {
+async function generateCarePlan(userInput) {
     cardsTrack.innerHTML = '<div class="loading-orb">Creating your care plan...</div>';
     carePlanOverlay.classList.add('visible');
 
@@ -228,7 +230,7 @@ RULES:
             const key = document.getElementById('apiKeyInput').value;
             if (key) {
                 localStorage.setItem('gemini_api_key', key);
-                generateCarePlanFromOrb(userInput);
+                generateCarePlan(userInput);
             }
         });
         return;
@@ -267,7 +269,7 @@ RULES:
 
         const carePlan = JSON.parse(cleanJson);
         cardsTrack.innerHTML = renderCareCards(carePlan);
-        orbHint.textContent = 'Tap to speak';
+        voiceBarText.textContent = defaultText;
 
         // Start auto-scroll after cards animate in
         setTimeout(() => {
