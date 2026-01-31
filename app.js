@@ -6,6 +6,8 @@ const carePlanOverlay = document.getElementById('carePlanOverlay');
 const cardsTrack = document.getElementById('cardsTrack');
 const dismissPlan = document.getElementById('dismissPlan');
 
+let isFirstClick = true;
+
 // Blue/lilac color palette
 const colors = [
     { strong: 'rgba(147, 112, 219, 0.8)', medium: 'rgba(147, 112, 219, 0.5)', soft: 'rgba(147, 112, 219, 0.2)' },
@@ -30,26 +32,40 @@ function getBodyRegion(x, y) {
     let vertical = '';
     let horizontal = '';
 
-    if (relY < 15) vertical = 'upper neck/head';
-    else if (relY < 30) vertical = 'upper back/shoulders';
-    else if (relY < 50) vertical = 'mid back';
-    else if (relY < 70) vertical = 'lower back';
-    else vertical = 'lower back/tailbone';
+    if (relY < 12) vertical = 'neck';
+    else if (relY < 28) vertical = 'upper back';
+    else if (relY < 48) vertical = 'mid back';
+    else if (relY < 68) vertical = 'lower back';
+    else vertical = 'tailbone';
 
-    if (relX < 35) horizontal = 'left side';
-    else if (relX > 65) horizontal = 'right side';
-    else horizontal = 'center/spine';
+    if (relX < 35) horizontal = 'left';
+    else if (relX > 65) horizontal = 'right';
+    else horizontal = '';
+
+    // Combine: "left lower back" or just "lower back" if center
+    const region = horizontal ? `${horizontal} ${vertical}` : vertical;
 
     return {
-        region: `${vertical} (${horizontal})`,
+        region: region,
         relativeX: relX.toFixed(1),
         relativeY: relY.toFixed(1)
     };
 }
 
-// Click on back to mark pain points
+// Click on back to mark pain points (only once)
 container.addEventListener('click', (e) => {
     if (e.target.closest('.label-bubble') || e.target.closest('.voice-orb-container') || e.target.closest('.care-plan-overlay')) return;
+
+    // Only allow one tap
+    if (!isFirstClick) return;
+
+    // Fade out the hurt prompt
+    const hurtPrompt = document.querySelector('.hurt-prompt');
+    if (hurtPrompt) {
+        hurtPrompt.style.transition = 'opacity 0.5s ease-out';
+        hurtPrompt.style.opacity = '0';
+    }
+    isFirstClick = false;
 
     const location = getBodyRegion(e.clientX, e.clientY);
     painPoints.push({
@@ -90,20 +106,13 @@ function createLabelBubble(x, y, location) {
     const bubble = document.createElement('div');
     bubble.className = 'label-bubble';
 
-    const regionName = location.region.replace('/', ' / ');
-    bubble.innerHTML = `<span class="bubble-text">${regionName}</span>`;
+    bubble.innerHTML = `<span class="bubble-text">How're you treating your ${location.region} pain?</span><button class="bubble-arrow" onclick="openFormModal()"></button>`;
 
     bubble.style.left = x + 'px';
     bubble.style.top = y + 'px';
 
     container.appendChild(bubble);
-
-    setTimeout(() => {
-        bubble.classList.add('popping');
-        bubble.addEventListener('animationend', () => {
-            bubble.remove();
-        });
-    }, 2000);
+    // Bubble persists - no timeout to remove it
 }
 
 // Voice orb functionality
@@ -330,3 +339,24 @@ dismissPlan.addEventListener('click', () => {
 // Pause auto-scroll when user interacts
 cardsTrack.addEventListener('touchstart', stopAutoScroll);
 cardsTrack.addEventListener('mousedown', stopAutoScroll);
+
+// Form Modal functionality
+const formModal = document.getElementById('formModal');
+const formModalClose = document.getElementById('formModalClose');
+
+window.openFormModal = function() {
+    formModal.classList.add('visible');
+}
+
+function closeFormModal() {
+    formModal.classList.remove('visible');
+}
+
+formModalClose.addEventListener('click', closeFormModal);
+
+// Close modal when clicking outside the content
+formModal.addEventListener('click', (e) => {
+    if (e.target === formModal) {
+        closeFormModal();
+    }
+});

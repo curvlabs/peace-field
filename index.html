@@ -11,13 +11,6 @@
         <img src="assets/FLORA Image.webp" alt="" class="back-image" id="backImage">
     </div>
 
-    <div class="voice-orb-container" id="voiceOrbContainer">
-        <div class="voice-orb" id="voiceOrb">
-            <div class="orb-glow"></div>
-            <div class="orb-core"></div>
-        </div>
-        <div class="orb-hint" id="orbHint">Tap to speak</div>
-    </div>
 
     <div class="care-plan-overlay" id="carePlanOverlay">
         <h2 class="plan-heading">Here's your care plan:</h2>
@@ -25,6 +18,20 @@
         <button class="dismiss-plan" id="dismissPlan">×</button>
     </div>
 
+    <div class="hurt-prompt">
+        <span>Where does your</span>
+        <span>back hurt?</span>
+    </div>
+
+    <!-- Form Modal Overlay -->
+    <div class="form-modal-overlay" id="formModal">
+        <div class="form-modal-content">
+            <button class="form-modal-close" id="formModalClose">×</button>
+            <div id="formflow-embed" data-form-id="62934820-d2a1-4880-b539-d2c27b137f61"></div>
+        </div>
+    </div>
+
+    <script src="https://myformflow.io/embed/widget.js"></script>
     <script src="app.js"></script>
 </body>
 </html>

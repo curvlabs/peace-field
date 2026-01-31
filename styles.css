@@ -59,6 +59,30 @@ html, body {
     );
 }
 
+/* Hurt Prompt Overlay */
+.hurt-prompt {
+    position: fixed;
+    top: 38%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    pointer-events: none;
+    z-index: 1000;
+    text-align: center;
+    isolation: isolate;
+}
+
+.hurt-prompt span {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    font-size: 28px;
+    font-weight: 500;
+    color: #1a1a1a;
+    letter-spacing: -0.3px;
+    line-height: 1.4;
+}
+
 /* The ripple of peace */
 .ripple {
     position: absolute;
@@ -103,24 +127,62 @@ html, body {
 /* Floating label bubble */
 .label-bubble {
     position: absolute;
-    padding: 10px 18px;
-    background: rgba(255, 255, 255, 0.95);
+    padding: 16px 24px;
+    background: rgba(240, 240, 240, 0.95);
     backdrop-filter: blur(10px);
-    border-radius: 20px;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+    border-radius: 50px;
     pointer-events: none;
     transform: translate(-50%, -100%) translateY(-15px);
     animation: bubbleAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     white-space: nowrap;
     z-index: 50;
+    display: flex;
+    align-items: center;
+    gap: 16px;
 }
 
 .bubble-text {
     font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    font-size: 14px;
-    font-weight: 500;
-    color: #555;
-    letter-spacing: 0.01em;
+    font-size: 16px;
+    font-weight: 400;
+    color: #333;
+    letter-spacing: -0.01em;
+}
+
+.bubble-arrow {
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    border: 1.5px solid #3478f6;
+    background: transparent;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+    text-decoration: none;
+    pointer-events: auto;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.2s ease;
+}
+
+.bubble-arrow:hover {
+    background-color: #3478f6;
+}
+
+.bubble-arrow:hover::after {
+    color: white;
+}
+
+.bubble-arrow:active {
+    transform: scale(0.95);
+}
+
+.bubble-arrow::after {
+    content: '→';
+    color: #3478f6;
+    font-size: 16px;
+    font-weight: 400;
+    transition: color 0.2s ease;
 }
 
 @keyframes bubbleAppear {
@@ -427,4 +489,63 @@ html, body {
 
 .api-key-help a {
     color: #667eea;
+}
+
+/* Form Modal Overlay */
+.form-modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: rgba(0, 0, 0, 0.4);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 2000;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s ease;
+}
+
+.form-modal-overlay.visible {
+    opacity: 1;
+    pointer-events: auto;
+}
+
+.form-modal-content {
+    position: relative;
+    background: white;
+    border-radius: 16px;
+    width: 90%;
+    max-width: 400px;
+    max-height: 85vh;
+    overflow-y: auto;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: scale(0.9) translateY(20px);
+    transition: transform 0.3s ease;
+}
+
+.form-modal-overlay.visible .form-modal-content {
+    transform: scale(1) translateY(0);
+}
+
+.form-modal-close {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    width: 32px;
+    height: 32px;
+    border: none;
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 50%;
+    font-size: 20px;
+    cursor: pointer;
+    color: #666;
+    z-index: 10;
+    transition: background 0.2s ease;
+}
+
+.form-modal-close:hover {
+    background: rgba(0, 0, 0, 0.1);
 }
