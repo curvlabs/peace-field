@@ -1,12 +1,26 @@
 const container = document.getElementById('container');
-const backImage = document.getElementById('backImage');
-const voiceOrb = document.getElementById('voiceOrb');
-const orbHint = document.getElementById('orbHint');
-const carePlanOverlay = document.getElementById('carePlanOverlay');
-const cardsTrack = document.getElementById('cardsTrack');
-const dismissPlan = document.getElementById('dismissPlan');
+const backVideo = document.getElementById('backVideo');
+const formModal = document.getElementById('formModal');
+const formModalClose = document.getElementById('formModalClose');
 
-let isFirstClick = true;
+// App state: 'twitch' | 'interactive' | 'bubble' | 'strip' | 'form'
+let appState = 'twitch';
+
+// Play twitch video on load
+backVideo.play();
+
+// When video ends, check state and act accordingly
+backVideo.addEventListener('ended', () => {
+    if (appState === 'twitch') {
+        // Twitch finished - show text overlay and allow clicks
+        appState = 'interactive';
+        document.querySelector('.hurt-prompt').classList.add('visible');
+    } else if (appState === 'strip') {
+        // Strip finished - show form modal
+        appState = 'form';
+        formModal.classList.add('visible');
+    }
+});
 
 // Blue/lilac color palette
 const colors = [
@@ -19,13 +33,10 @@ const colors = [
 ];
 
 let painPoints = [];
-let isListening = false;
-let orbRecognition = null;
-let orbTranscript = '';
 
 // Map click position to body region
 function getBodyRegion(x, y) {
-    const rect = backImage.getBoundingClientRect();
+    const rect = backVideo.getBoundingClientRect();
     const relX = ((x - rect.left) / rect.width) * 100;
     const relY = ((y - rect.top) / rect.height) * 100;
 
@@ -52,20 +63,18 @@ function getBodyRegion(x, y) {
     };
 }
 
-// Click on back to mark pain points (only once)
+// Click on back to mark pain points (only when interactive)
 container.addEventListener('click', (e) => {
-    if (e.target.closest('.label-bubble') || e.target.closest('.voice-orb-container') || e.target.closest('.care-plan-overlay')) return;
+    if (e.target.closest('.label-bubble') || e.target.closest('.care-plan-overlay')) return;
 
-    // Only allow one tap
-    if (!isFirstClick) return;
+    // Only allow clicks in interactive state
+    if (appState !== 'interactive') return;
 
     // Fade out the hurt prompt
     const hurtPrompt = document.querySelector('.hurt-prompt');
     if (hurtPrompt) {
-        hurtPrompt.style.transition = 'opacity 0.5s ease-out';
-        hurtPrompt.style.opacity = '0';
+        hurtPrompt.classList.remove('visible');
     }
-    isFirstClick = false;
 
     const location = getBodyRegion(e.clientX, e.clientY);
     painPoints.push({
@@ -77,6 +86,9 @@ container.addEventListener('click', (e) => {
 
     createRipple(e.clientX, e.clientY);
     createLabelBubble(e.clientX, e.clientY, location);
+
+    // Prevent further clicks
+    appState = 'bubble';
 });
 
 function createRipple(x, y) {
@@ -106,248 +118,32 @@ function createLabelBubble(x, y, location) {
     const bubble = document.createElement('div');
     bubble.className = 'label-bubble';
 
-    bubble.innerHTML = `<span class="bubble-text">How're you treating your ${location.region} pain?</span><button class="bubble-arrow" onclick="openFormModal()"></button>`;
+    // No arrow button - just the text
+    bubble.innerHTML = `<span class="bubble-text">How're you treating your ${location.region} pain?</span>`;
 
     bubble.style.left = x + 'px';
     bubble.style.top = y + 'px';
 
     container.appendChild(bubble);
-    // Bubble persists - no timeout to remove it
-}
 
-// Voice orb functionality
-voiceOrb.addEventListener('click', () => {
-    if (isListening) {
-        stopOrbListening();
-    } else {
-        startOrbListening();
-    }
-});
-
-function startOrbListening() {
-    if (!('webkitSpeechRecognition' in window) && !('SpeechRecognition' in window)) {
-        orbHint.textContent = 'Speech not supported. Try Chrome.';
-        return;
-    }
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    orbRecognition = new SpeechRecognition();
-    orbRecognition.continuous = true;
-    orbRecognition.interimResults = true;
-
-    orbTranscript = '';
-
-    orbRecognition.onstart = () => {
-        isListening = true;
-        voiceOrb.classList.add('listening');
-        orbHint.textContent = 'Listening...';
-    };
-
-    orbRecognition.onresult = (event) => {
-        let interim = '';
-        for (let i = event.resultIndex; i < event.results.length; i++) {
-            if (event.results[i].isFinal) {
-                orbTranscript += event.results[i][0].transcript + ' ';
-            } else {
-                interim += event.results[i][0].transcript;
-            }
-        }
-        orbHint.textContent = orbTranscript + interim || 'Listening...';
-    };
-
-    orbRecognition.onerror = (event) => {
-        orbHint.textContent = 'Error: ' + event.error;
-        stopOrbListening();
-    };
-
-    orbRecognition.onend = () => {
-        isListening = false;
-        voiceOrb.classList.remove('listening');
-
-        if (orbTranscript.trim()) {
-            orbHint.textContent = 'Creating your plan...';
-            generateCarePlanFromOrb(orbTranscript.trim());
-        } else {
-            orbHint.textContent = 'Tap to speak';
-        }
-    };
-
-    orbRecognition.start();
-}
-
-function stopOrbListening() {
-    if (orbRecognition) {
-        orbRecognition.stop();
-        isListening = false;
-        voiceOrb.classList.remove('listening');
-    }
-}
-
-async function generateCarePlanFromOrb(userInput) {
-    cardsTrack.innerHTML = '<div class="loading-orb">Creating your care plan...</div>';
-    carePlanOverlay.classList.add('visible');
-
-    const painContext = painPoints.length > 0
-        ? painPoints.map(p => `- ${p.region}`).join('\n')
-        : '- General back pain (no specific points marked)';
-
-    const prompt = `You are a compassionate wellness advisor creating a progressive daily care plan for back pain.
-
-PAIN LOCATIONS:
-${painContext}
-
-USER'S DESCRIPTION:
-${userInput}
-
-Return ONLY valid JSON (no markdown, no code blocks):
-{
-  "exercises": [
-    {
-      "dayRange": "Days 1-3",
-      "name": "Exercise name",
-      "duration": "1-2 minutes",
-      "frequency": "1x daily",
-      "description": "Clear, simple instructions for doing this exercise",
-      "imageSearch": "person doing [exercise name] stretch yoga"
-    }
-  ]
-}
-
-RULES:
-- Create exactly 4 exercises in a progressive sequence
-- Each exercise max 2 minutes, 1x per day
-- Day ranges should progress: Days 1-3, Days 4-7, Days 8-14, Days 15+
-- Start gentle, build intensity over time
-- imageSearch should be a search query to find a photo of someone doing this exercise
-- Keep descriptions concise but clear enough to follow`;
-
-    const apiKey = localStorage.getItem('gemini_api_key');
-
-    if (!apiKey) {
-        cardsTrack.innerHTML = `
-            <div class="api-key-prompt">
-                <p>Enter your Gemini API key:</p>
-                <input type="password" id="apiKeyInput" placeholder="API key" />
-                <button id="saveApiKey">Save</button>
-                <p class="api-key-help"><a href="https://makersuite.google.com/app/apikey" target="_blank">Get a free key</a></p>
-            </div>
-        `;
-
-        document.getElementById('saveApiKey').addEventListener('click', () => {
-            const key = document.getElementById('apiKeyInput').value;
-            if (key) {
-                localStorage.setItem('gemini_api_key', key);
-                generateCarePlanFromOrb(userInput);
-            }
+    // After delay, pop bubble and play strip video
+    setTimeout(() => {
+        bubble.classList.add('popping');
+        bubble.addEventListener('animationend', () => {
+            bubble.remove();
+            playStripVideo();
         });
-        return;
-    }
-
-    try {
-        const response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash:generateContent?key=${apiKey}`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-                contents: [{ parts: [{ text: prompt }] }]
-            })
-        });
-
-        const data = await response.json();
-
-        if (data.error) {
-            throw new Error(data.error.message || 'API error');
-        }
-
-        let responseText = '';
-        if (data.candidates && data.candidates[0]?.content?.parts?.[0]?.text) {
-            responseText = data.candidates[0].content.parts[0].text;
-        }
-
-        if (!responseText) {
-            throw new Error('No response from AI');
-        }
-
-        // Clean JSON
-        let cleanJson = responseText.trim();
-        if (cleanJson.startsWith('```json')) cleanJson = cleanJson.slice(7);
-        else if (cleanJson.startsWith('```')) cleanJson = cleanJson.slice(3);
-        if (cleanJson.endsWith('```')) cleanJson = cleanJson.slice(0, -3);
-        cleanJson = cleanJson.trim();
-
-        const carePlan = JSON.parse(cleanJson);
-        cardsTrack.innerHTML = renderCareCards(carePlan);
-        orbHint.textContent = 'Tap to speak';
-
-        // Start auto-scroll after cards animate in
-        setTimeout(() => {
-            startAutoScroll();
-        }, 800);
-
-    } catch (error) {
-        console.error('Error:', error);
-        cardsTrack.innerHTML = `<div class="error">Error: ${error.message}</div>`;
-        orbHint.textContent = 'Tap to try again';
-    }
+    }, 2500);
 }
 
-function renderCareCards(carePlan) {
-    let html = '';
-
-    carePlan.exercises.forEach((exercise, index) => {
-        const imageUrl = `https://source.unsplash.com/320x200/?${encodeURIComponent(exercise.imageSearch)}`;
-
-        html += `
-            <div class="care-card">
-                <img src="${imageUrl}" alt="${exercise.name}" class="care-card-image" loading="lazy">
-                <div class="care-card-category">${exercise.dayRange}</div>
-                <h3 class="care-card-name">${exercise.name}</h3>
-                <div class="care-card-meta">${exercise.duration}</div>
-            </div>
-        `;
-    });
-
-    return html;
+function playStripVideo() {
+    appState = 'strip';
+    backVideo.src = 'assets/strip.mp4';
+    backVideo.load();
+    backVideo.play();
 }
-
-// Auto-scroll the cards slowly
-let scrollInterval = null;
-function startAutoScroll() {
-    if (scrollInterval) clearInterval(scrollInterval);
-
-    scrollInterval = setInterval(() => {
-        if (cardsTrack.scrollLeft < cardsTrack.scrollWidth - cardsTrack.clientWidth) {
-            cardsTrack.scrollLeft += 0.5;
-        } else {
-            cardsTrack.scrollLeft = 0;
-        }
-    }, 30);
-}
-
-function stopAutoScroll() {
-    if (scrollInterval) {
-        clearInterval(scrollInterval);
-        scrollInterval = null;
-    }
-}
-
-// Dismiss plan button
-dismissPlan.addEventListener('click', () => {
-    carePlanOverlay.classList.remove('visible');
-    stopAutoScroll();
-});
-
-// Pause auto-scroll when user interacts
-cardsTrack.addEventListener('touchstart', stopAutoScroll);
-cardsTrack.addEventListener('mousedown', stopAutoScroll);
 
 // Form Modal functionality
-const formModal = document.getElementById('formModal');
-const formModalClose = document.getElementById('formModalClose');
-
-window.openFormModal = function() {
-    formModal.classList.add('visible');
-}
-
 function closeFormModal() {
     formModal.classList.remove('visible');
 }
