@@ -1,26 +1,154 @@
+import * as THREE from 'three';
+
 const container = document.getElementById('container');
-const backVideo = document.getElementById('backVideo');
+const canvas = document.getElementById('backCanvas');
+const introVideo = document.getElementById('introVideo');
 const formModal = document.getElementById('formModal');
 const formModalClose = document.getElementById('formModalClose');
 
-// App state: 'twitch' | 'interactive' | 'bubble' | 'strip' | 'form'
-let appState = 'twitch';
+// --- Three.js setup ---
+const renderer = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+renderer.setPixelRatio(window.devicePixelRatio);
 
-// Play twitch video on load
-backVideo.play();
+const scene = new THREE.Scene();
+const camera = new THREE.OrthographicCamera(-1, 1, 1, -1, 0.1, 10);
+camera.position.z = 1;
 
-// When video ends, check state and act accordingly
-backVideo.addEventListener('ended', () => {
-    if (appState === 'twitch') {
-        // Twitch finished - show text overlay and allow clicks
+// Texture will be set from the video's last frame
+const texture = new THREE.Texture();
+texture.colorSpace = THREE.SRGBColorSpace;
+
+// Subdivided plane for vertex displacement
+const SEGMENTS = 128;
+const geometry = new THREE.PlaneGeometry(2, 2, SEGMENTS, SEGMENTS);
+const material = new THREE.MeshBasicMaterial({ map: texture, transparent: true });
+const mesh = new THREE.Mesh(geometry, material);
+scene.add(mesh);
+
+// --- Intro video flow ---
+introVideo.play().catch(() => {
+    // Autoplay blocked — try again on first user interaction
+    const resumePlay = () => {
+        introVideo.play();
+        document.removeEventListener('click', resumePlay);
+        document.removeEventListener('touchstart', resumePlay);
+    };
+    document.addEventListener('click', resumePlay);
+    document.addEventListener('touchstart', resumePlay);
+});
+
+// Continuously capture the video frame so we always have the latest non-black frame
+const captureCanvas = document.createElement('canvas');
+let captureCtx = null;
+
+introVideo.addEventListener('playing', () => {
+    captureCanvas.width = introVideo.videoWidth;
+    captureCanvas.height = introVideo.videoHeight;
+    captureCtx = captureCanvas.getContext('2d');
+});
+
+// Capture every frame during playback
+function captureFrame() {
+    if (!introVideo.paused && !introVideo.ended && captureCtx) {
+        captureCtx.drawImage(introVideo, 0, 0);
+    }
+    if (appState === 'loading') {
+        requestAnimationFrame(captureFrame);
+    }
+}
+requestAnimationFrame(captureFrame);
+
+introVideo.addEventListener('ended', () => {
+    // Capture the actual last frame — the video element still displays it even after 'ended'
+    if (captureCtx) {
+        captureCtx.drawImage(introVideo, 0, 0);
+        // Bake soft edge fade into the texture (CSS mask can't target image content within canvas)
+        const w = captureCanvas.width;
+        const h = captureCanvas.height;
+        captureCtx.globalCompositeOperation = 'destination-out';
+        // Left fade
+        const leftGrad = captureCtx.createLinearGradient(0, 0, w * 0.15, 0);
+        leftGrad.addColorStop(0, 'rgba(0,0,0,1)');
+        leftGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        captureCtx.fillStyle = leftGrad;
+        captureCtx.fillRect(0, 0, w * 0.15, h);
+        // Right fade
+        const rightGrad = captureCtx.createLinearGradient(w * 0.85, 0, w, 0);
+        rightGrad.addColorStop(0, 'rgba(0,0,0,0)');
+        rightGrad.addColorStop(1, 'rgba(0,0,0,1)');
+        captureCtx.fillStyle = rightGrad;
+        captureCtx.fillRect(w * 0.85, 0, w * 0.15, h);
+        // Bottom fade
+        const bottomGrad = captureCtx.createLinearGradient(0, h * 0.65, 0, h);
+        bottomGrad.addColorStop(0, 'rgba(0,0,0,0)');
+        bottomGrad.addColorStop(1, 'rgba(0,0,0,1)');
+        captureCtx.fillStyle = bottomGrad;
+        captureCtx.fillRect(0, h * 0.65, w, h * 0.35);
+        // Top fade (subtle)
+        const topGrad = captureCtx.createLinearGradient(0, 0, 0, h * 0.08);
+        topGrad.addColorStop(0, 'rgba(0,0,0,1)');
+        topGrad.addColorStop(1, 'rgba(0,0,0,0)');
+        captureCtx.fillStyle = topGrad;
+        captureCtx.fillRect(0, 0, w, h * 0.08);
+        captureCtx.globalCompositeOperation = 'source-over';
+    }
+    texture.image = captureCanvas;
+    texture.needsUpdate = true;
+
+    const aspect = introVideo.videoWidth / introVideo.videoHeight;
+    fitPlaneToScreen(aspect);
+
+    // Show canvas on top, video stays paused underneath as fallback
+    canvas.classList.add('visible');
+
+    setTimeout(() => {
         appState = 'interactive';
         document.querySelector('.hurt-prompt').classList.add('visible');
-    } else if (appState === 'strip') {
-        // Strip finished - show form modal
-        appState = 'form';
-        formModal.classList.add('visible');
-    }
+        introVideo.classList.add('hidden');
+    }, 600);
 });
+
+// Store original vertex positions
+const posAttr = geometry.getAttribute('position');
+const originalPositions = new Float32Array(posAttr.array);
+
+// Active displacements: [{ centerX, centerY, strength, time }]
+const displacements = [];
+const TWITCH_RADIUS_X = 0.22;
+const TWITCH_RADIUS_Y = 0.15;
+const TWITCH_STRENGTH = 0.025;
+const TWITCH_DURATION = 0.8;
+
+function fitPlaneToScreen(imageAspect) {
+    const w = container.clientWidth;
+    const h = container.clientHeight;
+    const containerAspect = w / h;
+
+    renderer.setSize(w, h);
+
+    // Scale mesh to image aspect ratio (plane is 2x2, texture would stretch without this)
+    mesh.scale.set(imageAspect, 1, 1);
+
+    // Camera frustum must match container aspect ratio to avoid distortion
+    // Fit the scaled mesh inside (contain mode)
+    if (imageAspect > containerAspect) {
+        // Image wider than container — fit to width
+        camera.left = -imageAspect;
+        camera.right = imageAspect;
+        camera.top = imageAspect / containerAspect;
+        camera.bottom = -imageAspect / containerAspect;
+    } else {
+        // Image taller — fit to height
+        camera.left = -containerAspect;
+        camera.right = containerAspect;
+        camera.top = 1;
+        camera.bottom = -1;
+    }
+    camera.updateProjectionMatrix();
+}
+
+// --- App state ---
+let appState = 'loading';
 
 // Blue/lilac color palette
 const colors = [
@@ -36,7 +164,7 @@ let painPoints = [];
 
 // Map click position to body region
 function getBodyRegion(x, y) {
-    const rect = backVideo.getBoundingClientRect();
+    const rect = canvas.getBoundingClientRect();
     const relX = ((x - rect.left) / rect.width) * 100;
     const relY = ((y - rect.top) / rect.height) * 100;
 
@@ -53,7 +181,6 @@ function getBodyRegion(x, y) {
     else if (relX > 65) horizontal = 'right';
     else horizontal = '';
 
-    // Combine: "left lower back" or just "lower back" if center
     const region = horizontal ? `${horizontal} ${vertical}` : vertical;
 
     return {
@@ -63,18 +190,13 @@ function getBodyRegion(x, y) {
     };
 }
 
-// Click on back to mark pain points (only when interactive)
+// --- Click handling ---
 container.addEventListener('click', (e) => {
     if (e.target.closest('.label-bubble') || e.target.closest('.care-plan-overlay')) return;
-
-    // Only allow clicks in interactive state
     if (appState !== 'interactive') return;
 
-    // Fade out the hurt prompt
     const hurtPrompt = document.querySelector('.hurt-prompt');
-    if (hurtPrompt) {
-        hurtPrompt.classList.remove('visible');
-    }
+    if (hurtPrompt) hurtPrompt.classList.remove('visible');
 
     const location = getBodyRegion(e.clientX, e.clientY);
     painPoints.push({
@@ -84,13 +206,89 @@ container.addEventListener('click', (e) => {
         timestamp: new Date().toISOString()
     });
 
-    createRipple(e.clientX, e.clientY);
-    createLabelBubble(e.clientX, e.clientY, location);
+    // Trigger 3D twitch at click point
+    const rect = canvas.getBoundingClientRect();
+    const ndcX = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+    const ndcY = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+    // Convert NDC to world coords via camera bounds, then to local coords (undo mesh scale)
+    const worldX = THREE.MathUtils.mapLinear(ndcX, -1, 1, camera.left, camera.right);
+    const worldY = THREE.MathUtils.mapLinear(ndcY, -1, 1, camera.bottom, camera.top);
+    const localX = worldX / mesh.scale.x;
+    const localY = worldY / mesh.scale.y;
+    triggerTwitch(localX, localY);
 
-    // Prevent further clicks
+    // Delay ripple so the twitch plays first
+    setTimeout(() => createRipple(e.clientX, e.clientY), 400);
+    // Label appears halfway through the ripple bloom (bloom is 2.5s, starts at 400ms)
+    setTimeout(() => createLabelBubble(e.clientX, e.clientY, location), 1650);
+
     appState = 'bubble';
 });
 
+function triggerTwitch(cx, cy) {
+    displacements.push({ centerX: cx, centerY: cy, strength: TWITCH_STRENGTH, time: 0 });
+}
+
+// --- Animation loop ---
+const clock = new THREE.Clock();
+
+function animate() {
+    requestAnimationFrame(animate);
+    const dt = clock.getDelta();
+
+    // Reset positions
+    posAttr.array.set(originalPositions);
+
+    // Apply active displacements
+    for (let d = displacements.length - 1; d >= 0; d--) {
+        const disp = displacements[d];
+        disp.time += dt;
+
+        if (disp.time > TWITCH_DURATION) {
+            displacements.splice(d, 1);
+            continue;
+        }
+
+        // Natural muscle twitch: quick contraction, slow release with gentle secondary pulse
+        const t = disp.time / TWITCH_DURATION;
+        // Fast rise (t^0.3), then slow exponential decay with one soft secondary pulse
+        const envelope = Math.exp(-4 * t) * (1 + 0.3 * Math.sin(t * Math.PI * 2.5));
+        const currentStrength = disp.strength * envelope;
+
+        for (let i = 0; i < posAttr.count; i++) {
+            const vx = posAttr.getX(i);
+            const vy = posAttr.getY(i);
+            const dx = vx - disp.centerX;
+            const dy = vy - disp.centerY;
+            const normDist = Math.sqrt((dx / TWITCH_RADIUS_X) ** 2 + (dy / TWITCH_RADIUS_Y) ** 2);
+
+            if (normDist < 1) {
+                // Soft falloff — smooth skin-like spread
+                const falloff = Math.exp(-2 * normDist * normDist);
+                const dist = Math.sqrt(dx * dx + dy * dy);
+                if (dist > 0.001) {
+                    const nx = dx / dist;
+                    const ny = dy / dist;
+                    posAttr.setX(i, vx + nx * currentStrength * falloff);
+                    posAttr.setY(i, vy + ny * currentStrength * falloff);
+                }
+            }
+        }
+    }
+
+    posAttr.needsUpdate = true;
+    renderer.render(scene, camera);
+}
+animate();
+
+// --- Resize ---
+window.addEventListener('resize', () => {
+    if (texture.image) {
+        fitPlaneToScreen(texture.image.width / texture.image.height);
+    }
+});
+
+// --- UI functions (ripple, bubble, form) ---
 function createRipple(x, y) {
     const ripple = document.createElement('div');
     ripple.className = 'ripple';
@@ -108,51 +306,37 @@ function createRipple(x, y) {
     ripple.style.top = y + 'px';
 
     container.appendChild(ripple);
-
-    ripple.addEventListener('animationend', () => {
-        ripple.remove();
-    });
+    ripple.addEventListener('animationend', () => ripple.remove());
 }
 
 function createLabelBubble(x, y, location) {
     const bubble = document.createElement('div');
     bubble.className = 'label-bubble';
-
-    // No arrow button - just the text
-    bubble.innerHTML = `<span class="bubble-text">How're you treating your ${location.region} pain?</span>`;
-
+    bubble.innerHTML = `<span class="bubble-text">Let's figure out your ${location.region} pain.</span><button class="bubble-arrow"></button>`;
     bubble.style.left = x + 'px';
     bubble.style.top = y + 'px';
-
     container.appendChild(bubble);
 
-    // After delay, pop bubble and play strip video
-    setTimeout(() => {
+    bubble.querySelector('.bubble-arrow').addEventListener('click', () => {
         bubble.classList.add('popping');
         bubble.addEventListener('animationend', () => {
             bubble.remove();
-            playStripVideo();
+            showForm();
         });
-    }, 2500);
+    });
 }
 
-function playStripVideo() {
-    appState = 'strip';
-    backVideo.src = 'assets/strip.mp4';
-    backVideo.load();
-    backVideo.play();
+function showForm() {
+    appState = 'form';
+    formModal.classList.add('visible');
 }
 
-// Form Modal functionality
+// Form Modal
 function closeFormModal() {
     formModal.classList.remove('visible');
 }
 
 formModalClose.addEventListener('click', closeFormModal);
-
-// Close modal when clicking outside the content
 formModal.addEventListener('click', (e) => {
-    if (e.target === formModal) {
-        closeFormModal();
-    }
+    if (e.target === formModal) closeFormModal();
 });

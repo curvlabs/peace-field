@@ -82,6 +82,42 @@ html, body {
     );
 }
 
+#introVideo {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    z-index: 1;
+    transition: opacity 0.5s ease;
+    -webkit-mask-image:
+        linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%),
+        linear-gradient(to bottom, black 0%, black 60%, transparent 95%);
+    mask-image:
+        linear-gradient(to right, transparent 0%, black 30%, black 70%, transparent 100%),
+        linear-gradient(to bottom, black 0%, black 60%, transparent 95%);
+    -webkit-mask-composite: destination-in;
+    mask-composite: intersect;
+}
+
+#introVideo.hidden {
+    opacity: 0;
+    pointer-events: none;
+}
+
+#backCanvas {
+    position: absolute;
+    width: 100%;
+    height: 100%;
+    display: block;
+    opacity: 0;
+    transition: opacity 0.5s ease;
+    z-index: 2;
+}
+
+#backCanvas.visible {
+    opacity: 1;
+}
+
 /* Hurt Prompt Overlay */
 .hurt-prompt {
     position: fixed;
@@ -160,7 +196,7 @@ html, body {
     background: rgba(240, 240, 240, 0.95);
     backdrop-filter: blur(10px);
     border-radius: 50px;
-    pointer-events: none;
+    pointer-events: auto;
     transform: translate(-50%, -100%) translateY(-15px);
     animation: bubbleAppear 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
     white-space: nowrap;
