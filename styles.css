@@ -83,18 +83,16 @@ html, body {
 }
 
 #introVideo {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    object-fit: contain;
+    max-width: 100%;
+    max-height: 100%;
     z-index: 1;
     transition: opacity 0.5s ease;
     -webkit-mask-image:
-        linear-gradient(to right, transparent 0%, black 42%, black 58%, transparent 100%),
-        linear-gradient(to bottom, transparent 0%, black 8%, black 60%, transparent 95%);
+        linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%),
+        linear-gradient(to bottom, black 0%, black 91%, transparent 100%);
     mask-image:
-        linear-gradient(to right, transparent 0%, black 42%, black 58%, transparent 100%),
-        linear-gradient(to bottom, transparent 0%, black 8%, black 60%, transparent 95%);
+        linear-gradient(to right, transparent 0%, black 15%, black 85%, transparent 100%),
+        linear-gradient(to bottom, black 0%, black 91%, transparent 100%);
     -webkit-mask-composite: destination-in;
     mask-composite: intersect;
 }
@@ -112,34 +110,22 @@ html, body {
 }
 
 .edge-fade-left {
-    top: 0;
-    left: 0;
-    width: 35%;
-    height: 100%;
-    background: linear-gradient(to right, #f0ebe6 0%, #f0ebe6 20%, transparent 100%);
+    display: none;
 }
 
 .edge-fade-right {
-    top: 0;
-    right: 0;
-    width: 35%;
-    height: 100%;
-    background: linear-gradient(to left, #f0ebe6 0%, #f0ebe6 20%, transparent 100%);
+    display: none;
 }
 
 .edge-fade-top {
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 15%;
-    background: linear-gradient(to bottom, #f0ebe6 0%, #f0ebe6 10%, transparent 100%);
+    display: none;
 }
 
 .edge-fade-bottom {
     bottom: 0;
     left: 0;
     width: 100%;
-    height: 35%;
+    height: 9%;
     background: linear-gradient(to top, #f0ebe6 0%, #f0ebe6 15%, transparent 100%);
 }
 
@@ -652,4 +638,16 @@ html, body {
 
 .form-modal-close:hover {
     background: rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    #introVideo {
+        -webkit-mask-image:
+            linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%),
+            linear-gradient(to bottom, black 0%, black 91%, transparent 100%);
+        mask-image:
+            linear-gradient(to right, transparent 0%, black 8%, black 92%, transparent 100%),
+            linear-gradient(to bottom, black 0%, black 91%, transparent 100%);
+    }
+
 }

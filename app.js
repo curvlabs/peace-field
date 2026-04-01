@@ -41,11 +41,18 @@ introVideo.play().catch(() => {
 const captureCanvas = document.createElement('canvas');
 let captureCtx = null;
 
-introVideo.addEventListener('playing', () => {
+function initCapture() {
     captureCanvas.width = introVideo.videoWidth;
     captureCanvas.height = introVideo.videoHeight;
     captureCtx = captureCanvas.getContext('2d');
-});
+}
+
+introVideo.addEventListener('playing', initCapture);
+
+// If video is already playing by the time this module loads, init capture now
+if (!introVideo.paused && introVideo.videoWidth > 0) {
+    initCapture();
+}
 
 // Capture every frame during playback
 function captureFrame() {
@@ -58,11 +65,16 @@ function captureFrame() {
 }
 requestAnimationFrame(captureFrame);
 
-introVideo.addEventListener('ended', () => {
+function onVideoEnded() {
+    // Ensure capture context is ready (may have missed the playing event)
+    if (!captureCtx && introVideo.videoWidth > 0) {
+        initCapture();
+    }
+
     // Capture the actual last frame — the video element still displays it even after 'ended'
     if (captureCtx) {
         captureCtx.drawImage(introVideo, 0, 0);
-        // Bake soft edge fade into the texture (CSS mask can't target image content within canvas)
+        // Bake soft edge fade into the texture
         const w = captureCanvas.width;
         const h = captureCanvas.height;
         captureCtx.globalCompositeOperation = 'destination-out';
@@ -78,18 +90,12 @@ introVideo.addEventListener('ended', () => {
         rightGrad.addColorStop(1, 'rgba(0,0,0,1)');
         captureCtx.fillStyle = rightGrad;
         captureCtx.fillRect(w * 0.85, 0, w * 0.15, h);
-        // Bottom fade
-        const bottomGrad = captureCtx.createLinearGradient(0, h * 0.65, 0, h);
+        // Bottom fade (starts at 91%)
+        const bottomGrad = captureCtx.createLinearGradient(0, h * 0.91, 0, h);
         bottomGrad.addColorStop(0, 'rgba(0,0,0,0)');
         bottomGrad.addColorStop(1, 'rgba(0,0,0,1)');
         captureCtx.fillStyle = bottomGrad;
-        captureCtx.fillRect(0, h * 0.65, w, h * 0.35);
-        // Top fade (subtle)
-        const topGrad = captureCtx.createLinearGradient(0, 0, 0, h * 0.08);
-        topGrad.addColorStop(0, 'rgba(0,0,0,1)');
-        topGrad.addColorStop(1, 'rgba(0,0,0,0)');
-        captureCtx.fillStyle = topGrad;
-        captureCtx.fillRect(0, 0, w, h * 0.08);
+        captureCtx.fillRect(0, h * 0.91, w, h * 0.09);
         captureCtx.globalCompositeOperation = 'source-over';
     }
     texture.image = captureCanvas;
@@ -106,7 +112,14 @@ introVideo.addEventListener('ended', () => {
         document.querySelector('.hurt-prompt').classList.add('visible');
         introVideo.classList.add('hidden');
     }, 600);
-});
+}
+
+introVideo.addEventListener('ended', onVideoEnded);
+
+// If video already ended before this module loaded, run the handler now
+if (introVideo.ended) {
+    onVideoEnded();
+}
 
 // Store original vertex positions
 const posAttr = geometry.getAttribute('position');
